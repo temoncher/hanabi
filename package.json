@@ -14,11 +14,13 @@
     "@emotion/react": "11",
     "@emotion/styled": "11",
     "framer-motion": "^6.5.1",
+    "lodash": "^4.17.21",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@chakra-ui/cli": "^2.1.0",
+    "@types/lodash": "^4.14.182",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
     "@typescript-eslint/eslint-plugin": "^5.30.5",
