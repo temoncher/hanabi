@@ -93,9 +93,9 @@ function toColorGroups(cards: Card[]) {
 }
 
 function CardLabel({ status, ...props }: Omit<AvatarProps, 'bg' | 'icon'> & { status: CardStatus }) {
-  if (status === CardStatus.DISCARDED) return <Avatar bg="white" icon={<CloseIcon color="red.500" />} {...props} />;
+  if (status === CardStatus.DISCARDED) return <Avatar bg="red.500" icon={<CloseIcon color="white" />} {...props} />;
 
-  if (status === CardStatus.PLAYED) return <Avatar bg="white" icon={<CheckIcon color="green.500" />} {...props} />;
+  if (status === CardStatus.PLAYED) return <Avatar bg="green.500" icon={<CheckIcon color="white" />} {...props} />;
 
   return null;
 }
@@ -172,9 +172,8 @@ export function App() {
           <ModalBody display="flex" justifyContent="center" pb={10} gap={6}>
             <Avatar
               size="2xl"
-              bg="white"
-              shadow="md"
-              icon={<CloseIcon color="red.500" />}
+              bg="red.500"
+              icon={<CloseIcon color="white" />}
               onClick={() => {
                 applyStatus(selectedCard!, CardStatus.DISCARDED);
                 closeModal();
@@ -182,9 +181,8 @@ export function App() {
             />
             <Avatar
               size="2xl"
-              bg="white"
-              shadow="md"
-              icon={<RepeatIcon />}
+              bg="gray.500"
+              icon={<RepeatIcon color="white" />}
               onClick={() => {
                 applyStatus(selectedCard!, CardStatus.IN_GAME);
                 closeModal();
@@ -192,9 +190,8 @@ export function App() {
             />
             <Avatar
               size="2xl"
-              bg="white"
-              shadow="md"
-              icon={<CheckIcon color="green.500" />}
+              bg="green.500"
+              icon={<CheckIcon color="white" />}
               onClick={() => {
                 applyStatus(selectedCard!, CardStatus.PLAYED);
                 closeModal();
