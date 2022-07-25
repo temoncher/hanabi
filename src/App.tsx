@@ -103,14 +103,14 @@ function CardLabel({ status, ...props }: Omit<AvatarProps, 'bg' | 'icon'> & { st
 export function App() {
   const { isOpen, onOpen: openModal, onClose: closeModal } = useDisclosure();
   const [cardsMap, setCardsMap] = useState(keyBy(initialCards, (c) => c.id));
-  const [selectedCard, setSelectedCard] = useState<Card | undefined>(undefined);
+  const [selectedCardId, setSelectedCardId] = useState<string | undefined>(undefined);
   const cards = useMemo(() => toColorGroups(Object.values(cardsMap)), [cardsMap]);
 
-  function applyStatus(cardToDiscard: Card, status: CardStatus) {
+  function applyStatus(cardId: string, status: CardStatus) {
     setCardsMap({
       ...cardsMap,
-      [cardToDiscard.id]: {
-        ...cardToDiscard,
+      [cardId]: {
+        ...cardsMap[cardId],
         status,
       },
     });
@@ -139,7 +139,7 @@ export function App() {
                       bgColor={shouldInvert ? 'white' : fireworkColorToColorMap[card.color]}
                       color={shouldInvert ? fireworkColorToTextColorMap[card.color] : 'black'}
                       onClick={() => {
-                        setSelectedCard(card);
+                        setSelectedCardId(card.id);
                         openModal();
                       }}
                     >
@@ -175,7 +175,7 @@ export function App() {
               bg="red.500"
               icon={<CloseIcon color="white" />}
               onClick={() => {
-                applyStatus(selectedCard!, CardStatus.DISCARDED);
+                applyStatus(selectedCardId!, CardStatus.DISCARDED);
                 closeModal();
               }}
             />
@@ -184,7 +184,7 @@ export function App() {
               bg="gray.500"
               icon={<RepeatIcon color="white" />}
               onClick={() => {
-                applyStatus(selectedCard!, CardStatus.IN_GAME);
+                applyStatus(selectedCardId!, CardStatus.IN_GAME);
                 closeModal();
               }}
             />
@@ -193,7 +193,7 @@ export function App() {
               bg="green.500"
               icon={<CheckIcon color="white" />}
               onClick={() => {
-                applyStatus(selectedCard!, CardStatus.PLAYED);
+                applyStatus(selectedCardId!, CardStatus.PLAYED);
                 closeModal();
               }}
             />
