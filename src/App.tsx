@@ -2,6 +2,7 @@ import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@chakra-ui/react';
 import { GiCardPick, GiCardRandom } from 'react-icons/gi';
 
 import { AllCardsTab } from './AllCardsTab';
+import { HandTab } from './HandTab';
 
 export function App() {
   return (
@@ -15,11 +16,11 @@ export function App() {
         </Tab>
       </TabList>
       <TabPanels h="100vh">
-        <TabPanel>
+        <TabPanel h="full">
           <AllCardsTab />
         </TabPanel>
-        <TabPanel>
-          <p>HAND</p>
+        <TabPanel h="full">
+          <HandTab />
         </TabPanel>
       </TabPanels>
     </Tabs>

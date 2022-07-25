@@ -18,21 +18,8 @@ import {
 import { groupBy, keyBy } from 'lodash';
 import { useMemo, useState } from 'react';
 
-enum FireworkColor {
-  RED = 'RED',
-  GREEN = 'GREEN',
-  BLUE = 'BLUE',
-  YELLOW = 'YELLOW',
-  WHITE = 'WHITE',
-}
-
-const fireworkColorToColorMap = {
-  [FireworkColor.RED]: 'red.300',
-  [FireworkColor.GREEN]: 'green.300',
-  [FireworkColor.BLUE]: 'blue.300',
-  [FireworkColor.YELLOW]: 'yellow.300',
-  [FireworkColor.WHITE]: 'white',
-} as const;
+import { fireworkColorToColorMap } from './constants';
+import { FireworkColor, FireworkNominal, Card, CardStatus } from './types';
 
 const fireworkColorToTextColorMap = {
   [FireworkColor.RED]: fireworkColorToColorMap[FireworkColor.RED],
@@ -41,28 +28,6 @@ const fireworkColorToTextColorMap = {
   [FireworkColor.YELLOW]: fireworkColorToColorMap[FireworkColor.YELLOW],
   [FireworkColor.WHITE]: 'gray.300',
 } as const;
-
-enum FireworkNominal {
-  ONE = '1',
-  TWO = '2',
-  THREE = '3',
-  FOUR = '4',
-  FIVE = '5',
-}
-
-enum CardStatus {
-  IN_GAME = 'IN_GAME',
-  DISCARDED = 'DISCARDED',
-  PLAYED = 'PLAYED',
-}
-type CardId = `${FireworkColor}-${FireworkNominal}-${number}`;
-
-type Card = {
-  id: CardId;
-  color: FireworkColor;
-  nominal: FireworkNominal;
-  status: CardStatus;
-};
 
 const numbersOfCards = {
   [FireworkNominal.ONE]: 3,
@@ -133,10 +98,10 @@ export function AllCardsTab() {
                       position="relative"
                       fontSize="2rem"
                       fontWeight="bold"
-                      h="7.5vw"
+                      h="16vh"
                       shadow="md"
                       borderRadius={4}
-                      bgColor={shouldInvert ? 'white' : fireworkColorToColorMap[card.color]}
+                      bg={shouldInvert ? 'white' : fireworkColorToColorMap[card.color]}
                       color={shouldInvert ? fireworkColorToTextColorMap[card.color] : 'black'}
                       onClick={() => {
                         setSelectedCardId(card.id);
@@ -150,7 +115,7 @@ export function AllCardsTab() {
                           h="full"
                           top={0}
                           right={0}
-                          bgColor="blackAlpha.300"
+                          bg="blackAlpha.300"
                           borderRadius={4}
                         />
                       )}
