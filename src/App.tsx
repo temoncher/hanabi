@@ -1,5 +1,20 @@
 /* eslint-disable react/no-array-index-key */
-import { Center, HStack, VStack } from '@chakra-ui/react';
+import { CheckIcon, CloseIcon, RepeatIcon } from '@chakra-ui/icons';
+import {
+  Avatar,
+  AvatarProps,
+  Box,
+  Center,
+  HStack,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
+  useDisclosure,
+  VStack,
+} from '@chakra-ui/react';
 import { groupBy, keyBy } from 'lodash';
 import { useMemo, useState } from 'react';
 
@@ -11,6 +26,22 @@ enum FireworkColor {
   WHITE = 'WHITE',
 }
 
+const fireworkColorToColorMap = {
+  [FireworkColor.RED]: 'red.300',
+  [FireworkColor.GREEN]: 'green.300',
+  [FireworkColor.BLUE]: 'blue.300',
+  [FireworkColor.YELLOW]: 'yellow.300',
+  [FireworkColor.WHITE]: 'white',
+} as const;
+
+const fireworkColorToTextColorMap = {
+  [FireworkColor.RED]: fireworkColorToColorMap[FireworkColor.RED],
+  [FireworkColor.GREEN]: fireworkColorToColorMap[FireworkColor.GREEN],
+  [FireworkColor.BLUE]: fireworkColorToColorMap[FireworkColor.BLUE],
+  [FireworkColor.YELLOW]: fireworkColorToColorMap[FireworkColor.YELLOW],
+  [FireworkColor.WHITE]: 'gray.300',
+} as const;
+
 enum FireworkNominal {
   ONE = '1',
   TWO = '2',
@@ -21,8 +52,8 @@ enum FireworkNominal {
 
 enum CardStatus {
   IN_GAME = 'IN_GAME',
-  PLAYED = 'PLAYED',
   DISCARDED = 'DISCARDED',
+  PLAYED = 'PLAYED',
 }
 type CardId = `${FireworkColor}-${FireworkNominal}-${number}`;
 
@@ -61,46 +92,117 @@ function toColorGroups(cards: Card[]) {
   );
 }
 
+function CardLabel({ status, ...props }: Omit<AvatarProps, 'bg' | 'icon'> & { status: CardStatus }) {
+  if (status === CardStatus.DISCARDED) return <Avatar bg="white" icon={<CloseIcon color="red.500" />} {...props} />;
+
+  if (status === CardStatus.PLAYED) return <Avatar bg="white" icon={<CheckIcon color="green.500" />} {...props} />;
+
+  return null;
+}
+
 export function App() {
+  const { isOpen, onOpen: openModal, onClose: closeModal } = useDisclosure();
   const [cardsMap, setCardsMap] = useState(keyBy(initialCards, (c) => c.id));
+  const [selectedCard, setSelectedCard] = useState<Card | undefined>(undefined);
   const cards = useMemo(() => toColorGroups(Object.values(cardsMap)), [cardsMap]);
 
-  function discard(cardToDiscard: Card) {
+  function applyStatus(cardToDiscard: Card, status: CardStatus) {
     setCardsMap({
       ...cardsMap,
       [cardToDiscard.id]: {
         ...cardToDiscard,
-        status: CardStatus.DISCARDED,
+        status,
       },
     });
   }
 
   return (
-    <VStack pt={3}>
-      {cards.map((colorRow, colorRowIndex) => (
-        <HStack key={colorRowIndex} gap={4}>
-          {colorRow.map((nominalGroup, nominalGroupIndex) => (
-            <HStack key={nominalGroupIndex}>
-              {nominalGroup.map((card) => (
-                <Center
-                  key={card.id}
-                  sx={{ aspectRatio: '2 / 3' }}
-                  fontSize="2rem"
-                  fontWeight="bold"
-                  h="8vw"
-                  borderRadius={4}
-                  bgColor={card.status === CardStatus.DISCARDED ? 'grey' : card.color}
-                  onClick={() => {
-                    discard(card);
-                  }}
-                >
-                  {card.nominal}
-                </Center>
-              ))}
-            </HStack>
-          ))}
-        </HStack>
-      ))}
-    </VStack>
+    <>
+      <VStack pt={3}>
+        {cards.map((colorRow, colorRowIndex) => (
+          <HStack key={colorRowIndex} gap={4}>
+            {colorRow.map((nominalGroup, nominalGroupIndex) => (
+              <HStack key={nominalGroupIndex}>
+                {nominalGroup.map((card) => {
+                  const shouldInvert = card.status === CardStatus.DISCARDED || card.status === CardStatus.PLAYED;
+
+                  return (
+                    <Center
+                      key={card.id}
+                      sx={{ aspectRatio: '2 / 3' }}
+                      position="relative"
+                      fontSize="2rem"
+                      fontWeight="bold"
+                      h="8vw"
+                      shadow="md"
+                      borderRadius={4}
+                      bgColor={shouldInvert ? 'white' : fireworkColorToColorMap[card.color]}
+                      color={shouldInvert ? fireworkColorToTextColorMap[card.color] : 'black'}
+                      onClick={() => {
+                        setSelectedCard(card);
+                        openModal();
+                      }}
+                    >
+                      {shouldInvert && (
+                        <Box
+                          position="absolute"
+                          w="full"
+                          h="full"
+                          top={0}
+                          right={0}
+                          bgColor="blackAlpha.300"
+                          borderRadius={4}
+                        />
+                      )}
+                      <CardLabel position="absolute" top={-1} right={-1} size="xs" status={card.status} />
+                      {card.nominal}
+                    </Center>
+                  );
+                })}
+              </HStack>
+            ))}
+          </HStack>
+        ))}
+      </VStack>
+      <Modal isOpen={isOpen} size="lg" onClose={closeModal}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Choose action</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody display="flex" justifyContent="center" pb={10} gap={6}>
+            <Avatar
+              size="2xl"
+              bg="white"
+              shadow="md"
+              icon={<CloseIcon color="red.500" />}
+              onClick={() => {
+                applyStatus(selectedCard!, CardStatus.DISCARDED);
+                closeModal();
+              }}
+            />
+            <Avatar
+              size="2xl"
+              bg="white"
+              shadow="md"
+              icon={<RepeatIcon />}
+              onClick={() => {
+                applyStatus(selectedCard!, CardStatus.IN_GAME);
+                closeModal();
+              }}
+            />
+            <Avatar
+              size="2xl"
+              bg="white"
+              shadow="md"
+              icon={<CheckIcon color="green.500" />}
+              onClick={() => {
+                applyStatus(selectedCard!, CardStatus.PLAYED);
+                closeModal();
+              }}
+            />
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+    </>
   );
 }

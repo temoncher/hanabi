@@ -10,6 +10,7 @@
     "postinstall": "yarn gen:theme-types"
   },
   "dependencies": {
+    "@chakra-ui/icons": "^2.0.4",
     "@chakra-ui/react": "^2.2.0",
     "@emotion/react": "11",
     "@emotion/styled": "11",

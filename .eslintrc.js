@@ -33,6 +33,7 @@ module.exports = {
     ], // remove useSearchParams
     'prefer-object-spread': 2, // remove Object.assign
     'no-void': 0, // conflicts with @typescript-eslint/no-floating-promises quick fix
+    'react/destructuring-assignment': 0,
     'react/react-in-jsx-scope': 0,
     'react/forbid-component-props': [
       1,
