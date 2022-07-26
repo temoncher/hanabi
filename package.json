@@ -6,8 +6,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "gen:theme-types": "chakra-cli tokens ./src/theme.ts",
-    "postinstall": "npm run gen:theme-types"
+    "gen:theme-types": "chakra-cli tokens ./src/theme.ts"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.0.4",
