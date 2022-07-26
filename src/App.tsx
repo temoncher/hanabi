@@ -9,10 +9,10 @@ export function App() {
     <Tabs isFitted orientation="vertical">
       <TabList>
         <Tab>
-          <GiCardPick size="4em" />
+          <GiCardPick size="3.5em" />
         </Tab>
         <Tab>
-          <GiCardRandom size="4em" />
+          <GiCardRandom size="3.5em" />
         </Tab>
       </TabList>
       <TabPanels h="100vh">
