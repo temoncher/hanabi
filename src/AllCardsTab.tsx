@@ -96,7 +96,7 @@ export function AllCardsTab() {
                       key={card.id}
                       sx={{ aspectRatio: '2 / 3' }}
                       position="relative"
-                      fontSize="2rem"
+                      fontSize="4xl"
                       fontWeight="bold"
                       h="16vh"
                       shadow="md"
@@ -131,7 +131,7 @@ export function AllCardsTab() {
       </VStack>
       <Modal isOpen={isOpen} size="lg" onClose={closeModal}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent bg="gray.100">
           <ModalHeader>Choose action</ModalHeader>
           <ModalCloseButton />
           <ModalBody display="flex" justifyContent="center" pb={10} gap={6}>
@@ -139,6 +139,7 @@ export function AllCardsTab() {
               size="2xl"
               bg="red.500"
               icon={<CloseIcon color="white" />}
+              shadow="md"
               onClick={() => {
                 applyStatus(selectedCardId!, CardStatus.DISCARDED);
                 closeModal();
@@ -148,6 +149,7 @@ export function AllCardsTab() {
               size="2xl"
               bg="gray.500"
               icon={<RepeatIcon color="white" />}
+              shadow="md"
               onClick={() => {
                 applyStatus(selectedCardId!, CardStatus.IN_GAME);
                 closeModal();
@@ -157,6 +159,7 @@ export function AllCardsTab() {
               size="2xl"
               bg="green.500"
               icon={<CheckIcon color="white" />}
+              shadow="md"
               onClick={() => {
                 applyStatus(selectedCardId!, CardStatus.PLAYED);
                 closeModal();
