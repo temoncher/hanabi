@@ -6,6 +6,7 @@ import {
   Box,
   Center,
   HStack,
+  IconButton,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -39,6 +40,8 @@ type AllCardsTabProps = {
 export function AllCardsTab({ playedCards, discardedCards, onDiscard, onReset, onPlay }: AllCardsTabProps) {
   const { isOpen, onOpen: openModal, onClose: closeModal } = useDisclosure();
   const [selectedCardId, setSelectedCardId] = useState<CardId | undefined>(undefined);
+
+  const selectedCardIsDiscardedOrPlayed = !!discardedCards[selectedCardId!] || !!playedCards[selectedCardId!];
 
   return (
     <>
@@ -105,30 +108,39 @@ export function AllCardsTab({ playedCards, discardedCards, onDiscard, onReset, o
           <ModalHeader>Choose action</ModalHeader>
           <ModalCloseButton />
           <ModalBody display="flex" justifyContent="center" pb={10} gap={6}>
-            <Avatar
-              size="2xl"
+            <IconButton
+              isRound
+              isDisabled={selectedCardIsDiscardedOrPlayed}
+              aria-label="discard"
+              size="xl"
               bg="red.500"
-              icon={<CloseIcon color="white" />}
+              icon={<CloseIcon boxSize={10} color="white" />}
               shadow="md"
               onClick={() => {
                 onDiscard(selectedCardId!);
                 closeModal();
               }}
             />
-            <Avatar
-              size="2xl"
+            <IconButton
+              isRound
+              isDisabled={!selectedCardIsDiscardedOrPlayed}
+              aria-label="reset"
+              size="xl"
               bg="gray.500"
-              icon={<RepeatIcon color="white" />}
+              icon={<RepeatIcon boxSize={10} color="white" />}
               shadow="md"
               onClick={() => {
                 onReset(selectedCardId!);
                 closeModal();
               }}
             />
-            <Avatar
-              size="2xl"
+            <IconButton
+              isRound
+              isDisabled={selectedCardIsDiscardedOrPlayed}
+              aria-label="play"
+              size="xl"
               bg="green.500"
-              icon={<CheckIcon color="white" />}
+              icon={<CheckIcon boxSize={10} color="white" />}
               shadow="md"
               onClick={() => {
                 onPlay(selectedCardId!);
