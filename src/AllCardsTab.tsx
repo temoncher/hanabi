@@ -15,47 +15,10 @@ import {
   useDisclosure,
   VStack,
 } from '@chakra-ui/react';
-import { groupBy, keyBy } from 'lodash';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
-import { fireworkColorToColorMap } from './constants';
-import { FireworkColor, FireworkNominal, Card, CardStatus } from './types';
-
-const fireworkColorToTextColorMap = {
-  [FireworkColor.RED]: fireworkColorToColorMap[FireworkColor.RED],
-  [FireworkColor.GREEN]: fireworkColorToColorMap[FireworkColor.GREEN],
-  [FireworkColor.BLUE]: fireworkColorToColorMap[FireworkColor.BLUE],
-  [FireworkColor.YELLOW]: fireworkColorToColorMap[FireworkColor.YELLOW],
-  [FireworkColor.WHITE]: 'gray.300',
-} as const;
-
-const numbersOfCards = {
-  [FireworkNominal.ONE]: 3,
-  [FireworkNominal.TWO]: 2,
-  [FireworkNominal.THREE]: 2,
-  [FireworkNominal.FOUR]: 2,
-  [FireworkNominal.FIVE]: 1,
-} as const;
-
-const initialCards = Object.values(FireworkColor).flatMap((color) =>
-  Object.values(FireworkNominal).flatMap((nominal) =>
-    Array.from(
-      { length: numbersOfCards[nominal] },
-      (und, cardIndex): Card => ({
-        id: `${color}-${nominal}-${cardIndex}`,
-        color,
-        nominal,
-        status: CardStatus.IN_GAME,
-      }),
-    ),
-  ),
-);
-
-function toColorGroups(cards: Card[]) {
-  return Object.values(groupBy(cards, (c) => c.color)).map((colorGroup) =>
-    Object.values(groupBy(colorGroup, (c) => c.nominal)),
-  );
-}
+import { fireworkColorToColorMap, fireworkColorToTextColorMap } from './constants';
+import { numbersOfCards, FireworkColor, FireworkNominal, CardStatus, CardId, generateCardId } from './types';
 
 function CardLabel({ status, ...props }: Omit<AvatarProps, 'bg' | 'icon'> & { status: CardStatus }) {
   if (status === CardStatus.DISCARDED) return <Avatar bg="red.500" icon={<CloseIcon color="white" />} {...props} />;
@@ -65,35 +28,35 @@ function CardLabel({ status, ...props }: Omit<AvatarProps, 'bg' | 'icon'> & { st
   return null;
 }
 
-export function AllCardsTab() {
-  const { isOpen, onOpen: openModal, onClose: closeModal } = useDisclosure();
-  const [cardsMap, setCardsMap] = useState(keyBy(initialCards, (c) => c.id));
-  const [selectedCardId, setSelectedCardId] = useState<string | undefined>(undefined);
-  const cards = useMemo(() => toColorGroups(Object.values(cardsMap)), [cardsMap]);
+type AllCardsTabProps = {
+  playedCards: Partial<Record<CardId, true>>;
+  discardedCards: Partial<Record<CardId, true>>;
+  onReset: (cardId: CardId) => void;
+  onDiscard: (cardId: CardId) => void;
+  onPlay: (cardId: CardId) => void;
+};
 
-  function applyStatus(cardId: string, status: CardStatus) {
-    setCardsMap({
-      ...cardsMap,
-      [cardId]: {
-        ...cardsMap[cardId],
-        status,
-      },
-    });
-  }
+export function AllCardsTab({ playedCards, discardedCards, onDiscard, onReset, onPlay }: AllCardsTabProps) {
+  const { isOpen, onOpen: openModal, onClose: closeModal } = useDisclosure();
+  const [selectedCardId, setSelectedCardId] = useState<CardId | undefined>(undefined);
 
   return (
     <>
       <VStack>
-        {cards.map((colorRow, colorRowIndex) => (
+        {Object.values(FireworkColor).map((color, colorRowIndex) => (
           <HStack key={colorRowIndex} gap={4}>
-            {colorRow.map((nominalGroup, nominalGroupIndex) => (
+            {Object.values(FireworkNominal).map((nominal, nominalGroupIndex) => (
               <HStack key={nominalGroupIndex}>
-                {nominalGroup.map((card) => {
-                  const shouldInvert = card.status === CardStatus.DISCARDED || card.status === CardStatus.PLAYED;
+                {/* eslint-disable-next-line complexity */}
+                {Array.from({ length: numbersOfCards[nominal] }).map((und, cardIndex) => {
+                  const cardId = generateCardId([color, nominal, cardIndex as 0 | 1 | 2]);
+                  const isDiscarded = !!discardedCards[cardId];
+                  const isPlayed = !!playedCards[cardId];
+                  const isInverted = isDiscarded || isPlayed;
 
                   return (
                     <Center
-                      key={card.id}
+                      key={cardId}
                       sx={{ aspectRatio: '2 / 3' }}
                       position="relative"
                       fontSize="4xl"
@@ -101,14 +64,14 @@ export function AllCardsTab() {
                       h="16vh"
                       shadow="md"
                       borderRadius={4}
-                      bg={shouldInvert ? 'white' : fireworkColorToColorMap[card.color]}
-                      color={shouldInvert ? fireworkColorToTextColorMap[card.color] : 'black'}
+                      bg={isInverted ? 'white' : fireworkColorToColorMap[color]}
+                      color={isInverted ? fireworkColorToTextColorMap[color] : 'black'}
                       onClick={() => {
-                        setSelectedCardId(card.id);
+                        setSelectedCardId(cardId);
                         openModal();
                       }}
                     >
-                      {shouldInvert && (
+                      {isInverted && (
                         <Box
                           position="absolute"
                           w="full"
@@ -119,8 +82,15 @@ export function AllCardsTab() {
                           borderRadius={4}
                         />
                       )}
-                      <CardLabel position="absolute" top={-1} right={-1} size="xs" status={card.status} />
-                      {card.nominal}
+                      <CardLabel
+                        position="absolute"
+                        top={-1}
+                        right={-1}
+                        size="xs"
+                        // eslint-disable-next-line no-nested-ternary
+                        status={isDiscarded ? CardStatus.DISCARDED : isPlayed ? CardStatus.PLAYED : CardStatus.IN_GAME}
+                      />
+                      {nominal}
                     </Center>
                   );
                 })}
@@ -141,7 +111,7 @@ export function AllCardsTab() {
               icon={<CloseIcon color="white" />}
               shadow="md"
               onClick={() => {
-                applyStatus(selectedCardId!, CardStatus.DISCARDED);
+                onDiscard(selectedCardId!);
                 closeModal();
               }}
             />
@@ -151,7 +121,7 @@ export function AllCardsTab() {
               icon={<RepeatIcon color="white" />}
               shadow="md"
               onClick={() => {
-                applyStatus(selectedCardId!, CardStatus.IN_GAME);
+                onReset(selectedCardId!);
                 closeModal();
               }}
             />
@@ -161,7 +131,7 @@ export function AllCardsTab() {
               icon={<CheckIcon color="white" />}
               shadow="md"
               onClick={() => {
-                applyStatus(selectedCardId!, CardStatus.PLAYED);
+                onPlay(selectedCardId!);
                 closeModal();
               }}
             />

@@ -1,4 +1,5 @@
 import {
+  Box,
   Center,
   Divider,
   Flex,
@@ -16,12 +17,18 @@ import {
 import React, { useState } from 'react';
 import { GiLightBulb } from 'react-icons/gi';
 
-import { fireworkColorToColorMap } from './constants';
+import { fireworkColorToColorMap, fireworkColorToTextColorMap } from './constants';
 import { FireworkColor, FireworkNominal } from './types';
 
-export function HandTab() {
+type HandTabProps = {
+  outOfGameCards: Record<FireworkColor, Record<FireworkNominal, boolean>>;
+};
+
+export function HandTab({ outOfGameCards }: HandTabProps) {
   const { isOpen, onOpen: openModal, onClose: closeModal } = useDisclosure();
   const [selectedColumnsIndexes, setSelectedColumnsIndexes] = useState(new Set<number>());
+  const [colorHints, setColorHints] = useState<Record<number, FireworkColor | undefined>>({});
+  const [nominalHints, setNominalHints] = useState<Record<number, FireworkNominal | undefined>>({});
 
   return (
     <>
@@ -48,19 +55,36 @@ export function HandTab() {
               <VStack flex={1}>
                 {Object.values(FireworkColor).map((color) => (
                   <HStack key={color}>
-                    {Object.values(FireworkNominal).map((nominal) => (
-                      <Center
-                        key={`${color}-${nominal}`}
-                        sx={{ aspectRatio: '2 / 3' }}
-                        fontWeight="bold"
-                        shadow="md"
-                        borderRadius={2}
-                        bg={fireworkColorToColorMap[color]}
-                        h="7vh"
-                      >
-                        {nominal}
-                      </Center>
-                    ))}
+                    {Object.values(FireworkNominal).map((nominal) => {
+                      const isInverted = outOfGameCards[color][nominal];
+
+                      return (
+                        <Center
+                          key={`${color}-${nominal}`}
+                          sx={{ aspectRatio: '2 / 3' }}
+                          fontWeight="bold"
+                          shadow="md"
+                          borderRadius={2}
+                          position="relative"
+                          bg={isInverted ? 'white' : fireworkColorToColorMap[color]}
+                          color={isInverted ? fireworkColorToTextColorMap[color] : 'black'}
+                          h="7vh"
+                        >
+                          {isInverted && (
+                            <Box
+                              position="absolute"
+                              w="full"
+                              h="full"
+                              top={0}
+                              right={0}
+                              bg="blackAlpha.300"
+                              borderRadius={2}
+                            />
+                          )}
+                          {nominal}
+                        </Center>
+                      );
+                    })}
                   </HStack>
                 ))}
               </VStack>
@@ -101,8 +125,14 @@ export function HandTab() {
                   bg={fireworkColorToColorMap[color]}
                   h="20vh"
                   onClick={() => {
-                    console.log(color);
+                    const newColorHints = { ...colorHints };
+
+                    selectedColumnsIndexes.forEach((selectedColumnsIndex) => {
+                      newColorHints[selectedColumnsIndex] = color;
+                    });
+                    setColorHints(newColorHints);
                     closeModal();
+
                     setSelectedColumnsIndexes(new Set());
                   }}
                 />
@@ -120,7 +150,12 @@ export function HandTab() {
                   h="20vh"
                   bg="white"
                   onClick={() => {
-                    console.log(nominal);
+                    const newNominalHints = { ...nominalHints };
+
+                    selectedColumnsIndexes.forEach((selectedColumnsIndex) => {
+                      newNominalHints[selectedColumnsIndex] = nominal;
+                    });
+                    setNominalHints(newNominalHints);
                     closeModal();
                     setSelectedColumnsIndexes(new Set());
                   }}
