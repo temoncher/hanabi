@@ -157,7 +157,7 @@ const initalLogs: GameAction[] = [
   // discard('WHITE-5-0'),
   // play('GREEN-1-2'),
   // play('GREEN-2-0'),
-  hint({ positions: [1, 2], clue: FireworkColor.GREEN }),
+  // hint({ positions: [1, 2], clue: FireworkColor.GREEN }),
 ];
 
 function calulateFirstAvailableIndex(logs: GameAction[], color: FireworkColor, nominal: FireworkNominal) {
