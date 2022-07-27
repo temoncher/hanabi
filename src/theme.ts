@@ -12,4 +12,14 @@ export const theme = extendTheme({
       },
     },
   },
+  components: {
+    Button: {
+      sizes: {
+        xl: {
+          w: 24,
+          h: 24,
+        },
+      },
+    },
+  },
 });
