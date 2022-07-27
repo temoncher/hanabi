@@ -12,19 +12,29 @@ function isDefined<T>(obj: T): obj is Exclude<T, undefined> {
   return obj !== undefined;
 }
 
+export function isEnum<T extends string | number, TEnumValue extends string>(enumVariable: { [key in T]: TEnumValue }) {
+  const enumValues = Object.values(enumVariable);
+
+  return (value: unknown): value is TEnumValue =>
+    (typeof value === 'string' || typeof value === 'number') && enumValues.includes(value);
+}
+
 const discard = action('DISCARD', payload<CardId>());
 const play = action('PLAY', payload<CardId>());
 const reset = action('RESET', payload<CardId>());
-const gameAction = union(discard, play, reset);
+const hint = action('HINT', payload<{ positions: number[]; clue: FireworkColor | FireworkNominal }>());
+const gameAction = union(discard, play, reset, hint);
 
 type GameAction = typeof gameAction.actions;
 
 function calculateOutOfGameCards(logs: GameAction[]) {
   const result = Object.fromEntries(
     Object.values(FireworkColor).map((color) => {
-      const nominalMap = Object.values(FireworkNominal).map((nominal) => [nominal, 0] as const);
+      const nominalMap = Object.fromEntries(
+        Object.values(FireworkNominal).map((nominal) => [nominal, 0] as const),
+      ) as Record<FireworkNominal, number>;
 
-      return [color, Object.fromEntries(nominalMap) as Record<FireworkNominal, number>] as const;
+      return [color, nominalMap] as const;
     }),
   ) as Record<FireworkColor, Record<FireworkNominal, number>>;
 
@@ -65,24 +75,81 @@ function calculatePlayedCards(logs: GameAction[]) {
   return pickBy(result, isDefined) as Partial<Record<CardId, true>>;
 }
 
+function calculateRemovedBasedOnHintsCards(logs: GameAction[]) {
+  const result = Object.fromEntries(
+    Array.from({ length: 5 }, (und, cardPosition) => {
+      const colorMap = Object.fromEntries(
+        Object.values(FireworkColor).map((color) => {
+          const nominalMap = Object.fromEntries(
+            Object.values(FireworkNominal).map((nominal) => [nominal, false] as const),
+          ) as Record<FireworkNominal, boolean>;
+
+          return [color, nominalMap] as const;
+        }),
+      ) as Record<FireworkColor, Record<FireworkNominal, boolean>>;
+
+      return [cardPosition, colorMap] as const;
+    }),
+  ) as Record<number, Record<FireworkColor, Record<FireworkNominal, boolean>>>;
+
+  logs.forEach((logEntry) => {
+    if (!isType(logEntry, hint)) return;
+
+    const { positions, clue } = logEntry.payload;
+
+    positions.forEach((position) => {
+      if (isEnum(FireworkColor)(clue)) {
+        result[position] = mapValues(result[position], (nominalsMap, color) => {
+          if (color === clue) return nominalsMap;
+
+          return mapValues(nominalsMap, () => true);
+        });
+
+        Object.keys(result).forEach((otherPosition) => {
+          if (positions.includes(Number(otherPosition))) return;
+
+          const otherPositionColorsMap = result[Number(otherPosition)]!;
+
+          otherPositionColorsMap[clue] = mapValues(otherPositionColorsMap[clue], () => true);
+        });
+      } else {
+        result[position] = mapValues(result[position], (nominalsMap) =>
+          mapValues(nominalsMap, (bool, nominal) => (nominal === clue ? bool : true)),
+        );
+
+        Object.keys(result).forEach((otherPosition) => {
+          if (positions.includes(Number(otherPosition))) return;
+
+          result[Number(otherPosition)] = mapValues(result[Number(otherPosition)], (nominalMap) =>
+            mapValues(nominalMap, (bool, nominal) => (nominal === clue ? true : bool)),
+          );
+        });
+      }
+    });
+  });
+
+  return result;
+}
+
 const initalLogs: GameAction[] = [
-  discard('YELLOW-3-1'),
-  discard('BLUE-2-1'),
-  reset('YELLOW-3-1'),
-  play('BLUE-1-1'),
-  play('YELLOW-1-0'),
-  play('YELLOW-2-0'),
-  discard('YELLOW-2-1'),
-  play('YELLOW-3-1'),
-  discard('BLUE-2-0'),
-  play('GREEN-1-2'),
-  reset('GREEN-1-2'),
-  discard('YELLOW-3-0'),
-  discard('RED-3-1'),
-  discard('RED-3-0'),
-  discard('WHITE-5-0'),
-  play('GREEN-1-2'),
-  play('GREEN-2-0'),
+  // discard('YELLOW-3-1'),
+  // discard('BLUE-2-1'),
+  // reset('YELLOW-3-1'),
+  // play('BLUE-1-1'),
+  // play('YELLOW-1-0'),
+  // play('YELLOW-2-0'),
+  // discard('YELLOW-2-1'),
+  // play('YELLOW-3-1'),
+  // discard('BLUE-2-0'),
+  // play('GREEN-1-2'),
+  // reset('GREEN-1-2'),
+  // discard('YELLOW-3-0'),
+  // discard('RED-3-1'),
+  // discard('RED-3-0'),
+  // discard('WHITE-5-0'),
+  // play('GREEN-1-2'),
+  // play('GREEN-2-0'),
+  hint({ positions: [1, 2], clue: FireworkColor.GREEN }),
 ];
 
 export function App() {
@@ -90,6 +157,7 @@ export function App() {
   const discardedCards = calculateDiscardedCards(logs);
   const playedCards = calculatePlayedCards(logs);
   const outOfGameCards = calculateOutOfGameCards(logs);
+  const removedBasedOnHintsCards = calculateRemovedBasedOnHintsCards(logs);
 
   function dispatch(dispatchedAction: GameAction) {
     setLogs([...logs, dispatchedAction]);
@@ -122,7 +190,13 @@ export function App() {
           />
         </TabPanel>
         <TabPanel h="full">
-          <HandTab outOfGameCards={outOfGameCards} />
+          <HandTab
+            removedBasedOnHintsCards={removedBasedOnHintsCards}
+            outOfGameCards={outOfGameCards}
+            onHint={(positions, clue) => {
+              dispatch(hint({ positions, clue }));
+            }}
+          />
         </TabPanel>
       </TabPanels>
     </Tabs>

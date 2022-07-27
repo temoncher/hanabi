@@ -22,41 +22,42 @@ import { FireworkColor, FireworkNominal } from './types';
 
 type HandTabProps = {
   outOfGameCards: Record<FireworkColor, Record<FireworkNominal, boolean>>;
+  removedBasedOnHintsCards: Record<number, Record<FireworkColor, Record<FireworkNominal, boolean>>>;
+  onHint: (positions: number[], clue: FireworkColor | FireworkNominal) => void;
 };
 
-export function HandTab({ outOfGameCards }: HandTabProps) {
+export function HandTab({ removedBasedOnHintsCards, outOfGameCards, onHint }: HandTabProps) {
   const { isOpen, onOpen: openModal, onClose: closeModal } = useDisclosure();
-  const [selectedColumnsIndexes, setSelectedColumnsIndexes] = useState(new Set<number>());
-  const [colorHints, setColorHints] = useState<Record<number, FireworkColor | undefined>>({});
-  const [nominalHints, setNominalHints] = useState<Record<number, FireworkNominal | undefined>>({});
+  const [selectedCardPositions, setSelectedCardPositions] = useState(new Set<number>());
 
   return (
     <>
       <Flex h="full" align="stretch" gap={1}>
-        {Array.from({ length: 5 }, (und, columnIndex) => (
+        {Array.from({ length: 5 }, (und, cardPosition) => (
           // eslint-disable-next-line react/no-array-index-key
-          <React.Fragment key={columnIndex}>
+          <React.Fragment key={cardPosition}>
             <Center
-              bg={selectedColumnsIndexes.has(columnIndex) ? 'yellow.50' : undefined}
+              bg={selectedCardPositions.has(cardPosition) ? 'yellow.50' : undefined}
               borderRadius={4}
               px={2}
               onClick={() => {
-                const newSelectedColumns = new Set(selectedColumnsIndexes);
+                const newSelectedPositions = new Set(selectedCardPositions);
 
-                if (newSelectedColumns.has(columnIndex)) {
-                  newSelectedColumns.delete(columnIndex);
+                if (newSelectedPositions.has(cardPosition)) {
+                  newSelectedPositions.delete(cardPosition);
                 } else {
-                  newSelectedColumns.add(columnIndex);
+                  newSelectedPositions.add(cardPosition);
                 }
 
-                setSelectedColumnsIndexes(newSelectedColumns);
+                setSelectedCardPositions(newSelectedPositions);
               }}
             >
               <VStack flex={1}>
                 {Object.values(FireworkColor).map((color) => (
                   <HStack key={color}>
                     {Object.values(FireworkNominal).map((nominal) => {
-                      const isInverted = outOfGameCards[color][nominal];
+                      const isInverted =
+                        outOfGameCards[color][nominal] || removedBasedOnHintsCards[cardPosition]![color][nominal];
 
                       return (
                         <Center
@@ -89,13 +90,13 @@ export function HandTab({ outOfGameCards }: HandTabProps) {
                 ))}
               </VStack>
             </Center>
-            {columnIndex !== 4 && (
+            {cardPosition !== 4 && (
               <Divider orientation="vertical" borderWidth={2} borderColor="gray.300" borderRadius={2} />
             )}
           </React.Fragment>
         ))}
       </Flex>
-      {selectedColumnsIndexes.size !== 0 && (
+      {selectedCardPositions.size !== 0 && (
         <IconButton
           isRound
           colorScheme="blue"
@@ -125,15 +126,10 @@ export function HandTab({ outOfGameCards }: HandTabProps) {
                   bg={fireworkColorToColorMap[color]}
                   h="20vh"
                   onClick={() => {
-                    const newColorHints = { ...colorHints };
-
-                    selectedColumnsIndexes.forEach((selectedColumnsIndex) => {
-                      newColorHints[selectedColumnsIndex] = color;
-                    });
-                    setColorHints(newColorHints);
+                    onHint(Array.from(selectedCardPositions), color);
                     closeModal();
 
-                    setSelectedColumnsIndexes(new Set());
+                    setSelectedCardPositions(new Set());
                   }}
                 />
               ))}
@@ -150,14 +146,9 @@ export function HandTab({ outOfGameCards }: HandTabProps) {
                   h="20vh"
                   bg="white"
                   onClick={() => {
-                    const newNominalHints = { ...nominalHints };
-
-                    selectedColumnsIndexes.forEach((selectedColumnsIndex) => {
-                      newNominalHints[selectedColumnsIndex] = nominal;
-                    });
-                    setNominalHints(newNominalHints);
+                    onHint(Array.from(selectedCardPositions), nominal);
                     closeModal();
-                    setSelectedColumnsIndexes(new Set());
+                    setSelectedCardPositions(new Set());
                   }}
                 >
                   {nominal}
