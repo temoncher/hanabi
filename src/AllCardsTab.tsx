@@ -102,7 +102,7 @@ export function AllCardsTab({ playedCards, discardedCards, onDiscard, onReset, o
           </HStack>
         ))}
       </VStack>
-      <Modal isOpen={isOpen} size="lg" onClose={closeModal}>
+      <Modal isCentered isOpen={isOpen} size="lg" onClose={closeModal}>
         <ModalOverlay />
         <ModalContent bg="gray.100">
           <ModalHeader>Choose action</ModalHeader>
