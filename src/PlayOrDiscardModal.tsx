@@ -97,6 +97,7 @@ export function PlayOrDiscardModal({ isOpen, onClose, onSubmit }: PlayOrDiscardM
             colorScheme="blue"
             onClick={() => {
               onSubmit(selectedColor!, selectedNominal!);
+              reset();
               onClose();
             }}
           >
