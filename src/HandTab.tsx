@@ -16,19 +16,50 @@ import {
   useDisclosure,
   VStack,
 } from '@chakra-ui/react';
-import React, { useState } from 'react';
+import { difference, pick, uniq, unzip } from 'lodash';
+import React, { useMemo, useState } from 'react';
 import { GiLightBulb } from 'react-icons/gi';
 
 import { PlayOrDiscardModal } from './PlayOrDiscardModal';
 import { fireworkColorToColorMap, fireworkColorToTextColorMap } from './constants';
-import { CardId, FireworkColor, FireworkNominal, generateCardId } from './types';
+import { CardId, FireworkColor, FireworkNominal, generateCardId, parseCardId } from './types';
+
+function getAvailableColorsAndNominals(availableCardIds: CardId[] = []) {
+  const [availableColors, availableNominals] = unzip(availableCardIds.map(parseCardId)) as [
+    FireworkColor[] | undefined,
+    FireworkNominal[] | undefined,
+  ];
+
+  return [uniq(availableColors), uniq(availableNominals)] as const;
+}
+
+function getAvailibleCardIds(
+  outOfGameCards: Record<CardId, boolean>,
+  removedBasedOnHintsCards: Record<number, Record<CardId, boolean>>,
+  selectedCardPositions: Set<number>,
+) {
+  const availableCardIds = uniq(
+    Object.values(pick(removedBasedOnHintsCards, Array.from(selectedCardPositions))).flatMap((hintedCards) =>
+      Object.entries(hintedCards)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        .filter(([cardId, isOut]) => !isOut)
+        .map(([cardId]) => cardId as CardId),
+    ),
+  );
+  const outCardIds = Object.entries(outOfGameCards)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    .filter(([cardId, isOut]) => isOut)
+    .map(([cardId]) => cardId as CardId);
+
+  return difference(availableCardIds, outCardIds);
+}
 
 type HandTabProps = {
   outOfGameCards: Record<CardId, boolean>;
   removedBasedOnHintsCards: Record<number, Record<CardId, boolean>>;
   onHint: (positions: number[], clue: FireworkColor | FireworkNominal) => void;
-  onPlay: (position: number, color: FireworkColor, nominal: FireworkNominal) => void;
-  onDiscard: (position: number, color: FireworkColor, nominal: FireworkNominal) => void;
+  onPlay: (position: number, cardId: CardId) => void;
+  onDiscard: (position: number, cardId: CardId) => void;
 };
 
 export function HandTab({ removedBasedOnHintsCards, outOfGameCards, onHint, onPlay, onDiscard }: HandTabProps) {
@@ -40,6 +71,26 @@ export function HandTab({ removedBasedOnHintsCards, outOfGameCards, onHint, onPl
   } = useDisclosure();
   const [selectedCardPositions, setSelectedCardPositions] = useState(new Set<number>());
   const [actionType, setActionType] = useState<'discard' | 'play'>();
+
+  const firstSelectedCardPosition = Array.from(selectedCardPositions)[0];
+  const availableCardIds = useMemo(
+    () => getAvailibleCardIds(outOfGameCards, removedBasedOnHintsCards, selectedCardPositions),
+    [outOfGameCards, removedBasedOnHintsCards, selectedCardPositions],
+  );
+
+  const [availableColors, availableNominals] = getAvailableColorsAndNominals(availableCardIds);
+
+  function discardAndResetSelected(cardId: CardId) {
+    onDiscard(firstSelectedCardPosition!, cardId);
+
+    setSelectedCardPositions(new Set());
+  }
+
+  function playAndResetSelected(cardId: CardId) {
+    onPlay(firstSelectedCardPosition!, cardId);
+
+    setSelectedCardPositions(new Set());
+  }
 
   return (
     <>
@@ -117,8 +168,12 @@ export function HandTab({ removedBasedOnHintsCards, outOfGameCards, onHint, onPl
             size="lg"
             shadow="md"
             onClick={() => {
-              setActionType('discard');
-              openPlayOrDiscardModal();
+              if (availableCardIds.length === 1) {
+                discardAndResetSelected(availableCardIds[0]!);
+              } else {
+                setActionType('discard');
+                openPlayOrDiscardModal();
+              }
             }}
           />
         )}
@@ -131,8 +186,12 @@ export function HandTab({ removedBasedOnHintsCards, outOfGameCards, onHint, onPl
             size="lg"
             shadow="md"
             onClick={() => {
-              setActionType('play');
-              openPlayOrDiscardModal();
+              if (availableCardIds.length === 1) {
+                playAndResetSelected(availableCardIds[0]!);
+              } else {
+                setActionType('play');
+                openPlayOrDiscardModal();
+              }
             }}
           />
         )}
@@ -156,7 +215,7 @@ export function HandTab({ removedBasedOnHintsCards, outOfGameCards, onHint, onPl
           <ModalCloseButton />
           <ModalBody as={VStack} pb={10} gap={6}>
             <HStack gap={2}>
-              {Object.values(FireworkColor).map((color) => (
+              {availableColors.map((color) => (
                 <Center
                   key={color}
                   sx={{ aspectRatio: '2 / 3' }}
@@ -174,7 +233,7 @@ export function HandTab({ removedBasedOnHintsCards, outOfGameCards, onHint, onPl
               ))}
             </HStack>
             <HStack gap={2}>
-              {Object.values(FireworkNominal).map((nominal) => (
+              {availableNominals.map((nominal) => (
                 <Center
                   key={nominal}
                   sx={{ aspectRatio: '2 / 3' }}
@@ -200,17 +259,17 @@ export function HandTab({ removedBasedOnHintsCards, outOfGameCards, onHint, onPl
 
       <PlayOrDiscardModal
         isOpen={isPlayOrDiscardModalOpen}
+        availableColors={availableColors}
+        availableNominals={availableNominals}
         onClose={closePlayOrDiscardModal}
         onSubmit={(color, nominal) => {
-          const position = Array.from(selectedCardPositions)[0]!;
+          const cardId = generateCardId([color, nominal]);
 
           if (actionType === 'discard') {
-            onDiscard(position, color, nominal);
+            discardAndResetSelected(cardId);
           } else {
-            onPlay(position, color, nominal);
+            playAndResetSelected(cardId);
           }
-
-          setSelectedCardPositions(new Set());
         }}
       />
     </>

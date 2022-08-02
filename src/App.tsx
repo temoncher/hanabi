@@ -230,14 +230,10 @@ export function App() {
               onHint={(positions, clue) => {
                 dispatch(hint({ positions, clue }));
               }}
-              onDiscard={(position, color, nominal) => {
-                const cardId = generateCardId([color, nominal]);
-
+              onDiscard={(position, cardId) => {
                 dispatch(discard({ cardId, position }));
               }}
-              onPlay={(position, color, nominal) => {
-                const cardId = generateCardId([color, nominal]);
-
+              onPlay={(position, cardId) => {
                 dispatch(play({ cardId, position }));
               }}
             />
