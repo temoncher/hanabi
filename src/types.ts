@@ -13,12 +13,6 @@ export enum FireworkNominal {
   FIVE = '5',
 }
 
-export enum CardStatus {
-  IN_GAME = 'IN_GAME',
-  DISCARDED = 'DISCARDED',
-  PLAYED = 'PLAYED',
-}
-
 export type CardId = `${FireworkColor}-${FireworkNominal}`;
 
 export function generateCardId(config: [FireworkColor, FireworkNominal]) {
@@ -30,10 +24,3 @@ export function parseCardId(cardId: CardId) {
 
   return [color as FireworkColor, nominal as FireworkNominal] as const;
 }
-
-export type Card = {
-  id: CardId;
-  color: FireworkColor;
-  nominal: FireworkNominal;
-  status: CardStatus;
-};

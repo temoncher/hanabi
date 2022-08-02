@@ -1,7 +1,7 @@
 import { RepeatClockIcon } from '@chakra-ui/icons';
 import { ButtonGroup, IconButton, Tab, TabList, TabPanel, TabPanels, Tabs } from '@chakra-ui/react';
 import { mapValues } from 'lodash';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GiCardPick, GiCardRandom } from 'react-icons/gi';
 import { action, payload, union, isType } from 'ts-action';
 
@@ -140,9 +140,14 @@ function calculateRemovedBasedOnHintsCards(logs: GameAction[]) {
   return result;
 }
 
+const storedLogs = (JSON.parse(localStorage.getItem('logs')!) as GameAction[] | null) ?? [];
+
 const initalLogs: GameAction[] =
+  // eslint-disable-next-line no-nested-ternary
   import.meta.env.MODE !== 'development'
-    ? []
+    ? storedLogs
+    : storedLogs.length !== 0
+    ? storedLogs
     : [
         discard({ cardId: 'YELLOW-3' }),
         discard({ cardId: 'BLUE-2' }),
@@ -168,6 +173,10 @@ export function App() {
   const playedCards = calculatePlayedCards(logs);
   const outOfGameCards = calculateOutOfGameCards(logs);
   const removedBasedOnHintsCards = calculateRemovedBasedOnHintsCards(logs);
+
+  useEffect(() => {
+    localStorage.setItem('logs', JSON.stringify(logs));
+  }, [logs]);
 
   function dispatch(dispatchedAction: GameAction) {
     setLogs((prevLogs) => [...prevLogs, dispatchedAction]);

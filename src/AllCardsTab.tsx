@@ -19,7 +19,13 @@ import {
 import { useState } from 'react';
 
 import { numbersOfCards, fireworkColorToColorMap, fireworkColorToTextColorMap } from './constants';
-import { FireworkColor, FireworkNominal, CardStatus, CardId, generateCardId, parseCardId } from './types';
+import { FireworkColor, FireworkNominal, CardId, generateCardId, parseCardId } from './types';
+
+enum CardStatus {
+  IN_GAME = 'IN_GAME',
+  DISCARDED = 'DISCARDED',
+  PLAYED = 'PLAYED',
+}
 
 function isDefined<T>(obj: T): obj is Exclude<T, undefined> {
   return obj !== undefined;
