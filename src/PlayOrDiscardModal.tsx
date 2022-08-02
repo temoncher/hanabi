@@ -18,11 +18,19 @@ import { FireworkColor, FireworkNominal } from './types';
 
 type PlayOrDiscardModalProps = {
   isOpen: boolean;
+  availableColors: FireworkColor[];
+  availableNominals: FireworkNominal[];
   onClose: () => void;
   onSubmit: (color: FireworkColor, nominal: FireworkNominal) => void;
 };
 
-export function PlayOrDiscardModal({ isOpen, onClose, onSubmit }: PlayOrDiscardModalProps) {
+export function PlayOrDiscardModal({
+  isOpen,
+  availableColors,
+  availableNominals,
+  onClose,
+  onSubmit,
+}: PlayOrDiscardModalProps) {
   const [selectedColor, setSelectedColor] = useState<FireworkColor>();
   const [selectedNominal, setSelectedNominal] = useState<FireworkNominal>();
 
@@ -47,7 +55,7 @@ export function PlayOrDiscardModal({ isOpen, onClose, onSubmit }: PlayOrDiscardM
         <ModalCloseButton />
         <ModalBody as={VStack} gap={6}>
           <HStack gap={2}>
-            {Object.values(FireworkColor).map((color) => (
+            {availableColors.map((color) => (
               <Center
                 key={color}
                 sx={{
@@ -67,7 +75,7 @@ export function PlayOrDiscardModal({ isOpen, onClose, onSubmit }: PlayOrDiscardM
             ))}
           </HStack>
           <HStack gap={2}>
-            {Object.values(FireworkNominal).map((nominal) => (
+            {availableNominals.map((nominal) => (
               <Center
                 key={nominal}
                 sx={{
