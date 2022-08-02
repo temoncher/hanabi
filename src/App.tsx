@@ -1,4 +1,5 @@
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@chakra-ui/react';
+import { RepeatClockIcon } from '@chakra-ui/icons';
+import { ButtonGroup, IconButton, Tab, TabList, TabPanel, TabPanels, Tabs } from '@chakra-ui/react';
 import { pickBy, mapValues, difference } from 'lodash';
 import { useState } from 'react';
 import { GiCardPick, GiCardRandom } from 'react-icons/gi';
@@ -139,26 +140,29 @@ function calculateRemovedBasedOnHintsCards(logs: GameAction[]) {
   return result;
 }
 
-const initalLogs: GameAction[] = [
-  // discard('YELLOW-3-1'),
-  // discard('BLUE-2-1'),
-  // reset('YELLOW-3-1'),
-  // play('BLUE-1-1'),
-  // play('YELLOW-1-0'),
-  // play('YELLOW-2-0'),
-  // discard('YELLOW-2-1'),
-  // play('YELLOW-3-1'),
-  // discard('BLUE-2-0'),
-  // play('GREEN-1-2'),
-  // reset('GREEN-1-2'),
-  // discard('YELLOW-3-0'),
-  // discard('RED-3-1'),
-  // discard('RED-3-0'),
-  // discard('WHITE-5-0'),
-  // play('GREEN-1-2'),
-  // play('GREEN-2-0'),
-  // hint({ positions: [1, 2], clue: FireworkColor.GREEN }),
-];
+const initalLogs: GameAction[] =
+  import.meta.env.MODE !== 'development'
+    ? []
+    : [
+        discard({ cardId: 'YELLOW-3-1' }),
+        discard({ cardId: 'BLUE-2-1' }),
+        reset({ cardId: 'YELLOW-3-1' }),
+        play({ cardId: 'BLUE-1-1' }),
+        play({ cardId: 'YELLOW-1-0' }),
+        play({ cardId: 'YELLOW-2-0' }),
+        discard({ cardId: 'YELLOW-2-1' }),
+        play({ cardId: 'YELLOW-3-1' }),
+        discard({ cardId: 'BLUE-2-0' }),
+        play({ cardId: 'GREEN-1-2' }),
+        reset({ cardId: 'GREEN-1-2' }),
+        discard({ cardId: 'YELLOW-3-0' }),
+        discard({ cardId: 'RED-3-1' }),
+        discard({ cardId: 'RED-3-0' }),
+        discard({ cardId: 'WHITE-5-0' }),
+        play({ cardId: 'GREEN-1-2' }),
+        play({ cardId: 'GREEN-2-0' }),
+        hint({ positions: [1, 2], clue: FireworkColor.GREEN }),
+      ];
 
 function calulateFirstAvailableIndex(logs: GameAction[], color: FireworkColor, nominal: FireworkNominal) {
   const outOfGameIndexes = new Set<number>();
@@ -196,54 +200,73 @@ export function App() {
     setLogs((prevLogs) => [...prevLogs, dispatchedAction]);
   }
 
+  function undo() {
+    setLogs((prevLogs) => prevLogs.slice(0, prevLogs.length - 1));
+  }
+
   return (
-    <Tabs isFitted orientation="vertical">
-      <TabList>
-        <Tab>
-          <GiCardPick size="3.5em" />
-        </Tab>
-        <Tab>
-          <GiCardRandom size="3.5em" />
-        </Tab>
-      </TabList>
-      <TabPanels h="100vh">
-        <TabPanel h="full">
-          <AllCardsTab
-            discardedCards={discardedCards}
-            playedCards={playedCards}
-            onDiscard={(cardId) => {
-              dispatch(discard({ cardId }));
-            }}
-            onReset={(cardId) => {
-              dispatch(reset({ cardId }));
-            }}
-            onPlay={(cardId) => {
-              dispatch(play({ cardId }));
-            }}
+    <>
+      <ButtonGroup position="fixed" top={7} right={7} gap={1} zIndex={10}>
+        {logs.length !== 0 && (
+          <IconButton
+            isRound
+            colorScheme="blue"
+            aria-label="undo"
+            size="lg"
+            shadow="md"
+            icon={<RepeatClockIcon boxSize={8} color="white" />}
+            onClick={undo}
           />
-        </TabPanel>
-        <TabPanel h="full">
-          <HandTab
-            removedBasedOnHintsCards={removedBasedOnHintsCards}
-            outOfGameCards={outOfGameCards}
-            onHint={(positions, clue) => {
-              dispatch(hint({ positions, clue }));
-            }}
-            onDiscard={(position, color, nominal) => {
-              const cardIndex = calulateFirstAvailableIndex(logs, color, nominal);
-              const cardId = generateCardId([color, nominal, cardIndex as 0 | 1 | 2]);
+        )}
+      </ButtonGroup>
+      <Tabs isFitted orientation="vertical">
+        <TabList>
+          <Tab>
+            <GiCardPick size="3.5em" />
+          </Tab>
+          <Tab>
+            <GiCardRandom size="3.5em" />
+          </Tab>
+        </TabList>
+        <TabPanels h="100vh">
+          <TabPanel h="full">
+            <AllCardsTab
+              discardedCards={discardedCards}
+              playedCards={playedCards}
+              onDiscard={(cardId) => {
+                dispatch(discard({ cardId }));
+              }}
+              onReset={(cardId) => {
+                dispatch(reset({ cardId }));
+              }}
+              onPlay={(cardId) => {
+                dispatch(play({ cardId }));
+              }}
+            />
+          </TabPanel>
+          <TabPanel h="full">
+            <HandTab
+              removedBasedOnHintsCards={removedBasedOnHintsCards}
+              outOfGameCards={outOfGameCards}
+              onHint={(positions, clue) => {
+                dispatch(hint({ positions, clue }));
+              }}
+              onDiscard={(position, color, nominal) => {
+                const cardIndex = calulateFirstAvailableIndex(logs, color, nominal);
+                const cardId = generateCardId([color, nominal, cardIndex as 0 | 1 | 2]);
 
-              dispatch(discard({ cardId, position }));
-            }}
-            onPlay={(position, color, nominal) => {
-              const cardIndex = calulateFirstAvailableIndex(logs, color, nominal);
-              const cardId = generateCardId([color, nominal, cardIndex as 0 | 1 | 2]);
+                dispatch(discard({ cardId, position }));
+              }}
+              onPlay={(position, color, nominal) => {
+                const cardIndex = calulateFirstAvailableIndex(logs, color, nominal);
+                const cardId = generateCardId([color, nominal, cardIndex as 0 | 1 | 2]);
 
-              dispatch(play({ cardId, position }));
-            }}
-          />
-        </TabPanel>
-      </TabPanels>
-    </Tabs>
+                dispatch(play({ cardId, position }));
+              }}
+            />
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+    </>
   );
 }
