@@ -10,7 +10,7 @@ import { HandTab } from './HandTab';
 import { numbersOfCards } from './constants';
 import { CardId, FireworkColor, FireworkNominal, parseCardId, generateCardId } from './types';
 
-export function isEnum<T extends string | number, TEnumValue extends string>(enumVariable: { [key in T]: TEnumValue }) {
+function isEnum<T extends string | number, TEnumValue extends string>(enumVariable: { [key in T]: TEnumValue }) {
   const enumValues = Object.values(enumVariable);
 
   return (value: unknown): value is TEnumValue =>

@@ -20,7 +20,10 @@ import { useState } from 'react';
 
 import { numbersOfCards, fireworkColorToColorMap, fireworkColorToTextColorMap } from './constants';
 import { FireworkColor, FireworkNominal, CardStatus, CardId, generateCardId, parseCardId } from './types';
-import { isDefined } from './utils';
+
+function isDefined<T>(obj: T): obj is Exclude<T, undefined> {
+  return obj !== undefined;
+}
 
 function CardLabel({ status, ...props }: Omit<AvatarProps, 'bg' | 'icon'> & { status: CardStatus }) {
   if (status === CardStatus.DISCARDED) return <Avatar bg="red.500" icon={<CloseIcon color="white" />} {...props} />;
