@@ -140,7 +140,20 @@ function calculateRemovedBasedOnHintsCards(logs: GameAction[]) {
   return result;
 }
 
-const storedLogs = (JSON.parse(localStorage.getItem('logs')!) as GameAction[] | null) ?? [];
+function getStoredLogs() {
+  const storedLogs = (JSON.parse(localStorage.getItem('logs')!) as GameAction[] | null) ?? [];
+
+  // TODO: replace with `zod` validation to validate payload shapes too
+  if (!storedLogs.every((log) => gameAction.map((a) => a.type).includes(log.type))) {
+    localStorage.removeItem('logs');
+
+    return [];
+  }
+
+  return storedLogs;
+}
+
+const storedLogs = getStoredLogs();
 
 const initalLogs: GameAction[] =
   // eslint-disable-next-line no-nested-ternary
