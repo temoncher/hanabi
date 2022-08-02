@@ -1,17 +1,14 @@
 import { RepeatClockIcon } from '@chakra-ui/icons';
 import { ButtonGroup, IconButton, Tab, TabList, TabPanel, TabPanels, Tabs } from '@chakra-ui/react';
-import { pickBy, mapValues, difference } from 'lodash';
+import { mapValues } from 'lodash';
 import { useState } from 'react';
 import { GiCardPick, GiCardRandom } from 'react-icons/gi';
 import { action, payload, union, isType } from 'ts-action';
 
 import { AllCardsTab } from './AllCardsTab';
 import { HandTab } from './HandTab';
-import { numbersOfCards, CardId, FireworkColor, FireworkNominal, parseCardId, generateCardId } from './types';
-
-function isDefined<T>(obj: T): obj is Exclude<T, undefined> {
-  return obj !== undefined;
-}
+import { numbersOfCards } from './constants';
+import { CardId, FireworkColor, FireworkNominal, parseCardId, generateCardId } from './types';
 
 export function isEnum<T extends string | number, TEnumValue extends string>(enumVariable: { [key in T]: TEnumValue }) {
   const enumValues = Object.values(enumVariable);
@@ -22,76 +19,67 @@ export function isEnum<T extends string | number, TEnumValue extends string>(enu
 
 const discard = action('DISCARD', payload<{ cardId: CardId; position?: number }>());
 const play = action('PLAY', payload<{ cardId: CardId; position?: number }>());
-const reset = action('RESET', payload<{ cardId: CardId }>());
 const hint = action('HINT', payload<{ positions: number[]; clue: FireworkColor | FireworkNominal }>());
-const gameAction = union(discard, play, reset, hint);
+const gameAction = union(discard, play, hint);
 
 type GameAction = typeof gameAction.actions;
 
 function calculateOutOfGameCards(logs: GameAction[]) {
   const result = Object.fromEntries(
-    Object.values(FireworkColor).map((color) => {
-      const nominalMap = Object.fromEntries(
-        Object.values(FireworkNominal).map((nominal) => [nominal, 0] as const),
-      ) as Record<FireworkNominal, number>;
-
-      return [color, nominalMap] as const;
-    }),
-  ) as Record<FireworkColor, Record<FireworkNominal, number>>;
+    Object.values(FireworkColor).flatMap((color) =>
+      Object.values(FireworkNominal).map((nominal) => [generateCardId([color, nominal]), 0] as const),
+    ),
+  ) as Record<CardId, number>;
 
   logs.forEach((logEntry) => {
-    if (!isType(logEntry, discard, play, reset)) return;
+    if (!isType(logEntry, discard, play)) return;
 
-    const [color, nominal] = parseCardId(logEntry.payload.cardId);
-
-    result[color][nominal] += isType(logEntry, reset) ? -1 : 1;
+    result[logEntry.payload.cardId] += 1;
   });
 
-  return mapValues(result, (nominalMap) =>
-    mapValues(nominalMap, (numberOfCards, nominal) => numberOfCards === numbersOfCards[nominal as FireworkNominal]),
-  );
+  return mapValues(result, (numberOfCards, cardId) => {
+    const nominal = parseCardId(cardId as CardId)[1];
+
+    return numberOfCards === numbersOfCards[nominal];
+  });
 }
 
 function calculateDiscardedCards(logs: GameAction[]) {
-  const result: Partial<Record<CardId, true | undefined>> = {};
+  const result: Partial<Record<CardId, number>> = {};
 
   logs.forEach((logEntry) => {
-    if (!isType(logEntry, discard, reset)) return;
+    if (!isType(logEntry, discard)) return;
 
-    result[logEntry.payload.cardId] = isType(logEntry, reset) ? undefined : true;
+    result[logEntry.payload.cardId] = (result[logEntry.payload.cardId] ?? 0) + 1;
   });
 
-  return pickBy(result, isDefined) as Partial<Record<CardId, true>>;
+  return result;
 }
 
 function calculatePlayedCards(logs: GameAction[]) {
-  const result: Partial<Record<CardId, true | undefined>> = {};
+  const result: Partial<Record<CardId, 1>> = {};
 
   logs.forEach((logEntry) => {
-    if (!isType(logEntry, play, reset)) return;
+    if (!isType(logEntry, play)) return;
 
-    result[logEntry.payload.cardId] = isType(logEntry, reset) ? undefined : true;
+    result[logEntry.payload.cardId] = 1;
   });
 
-  return pickBy(result, isDefined) as Partial<Record<CardId, true>>;
+  return result;
 }
 
 function calculateRemovedBasedOnHintsCards(logs: GameAction[]) {
   const result = Object.fromEntries(
     Array.from({ length: 5 }, (und, cardPosition) => {
-      const colorMap = Object.fromEntries(
-        Object.values(FireworkColor).map((color) => {
-          const nominalMap = Object.fromEntries(
-            Object.values(FireworkNominal).map((nominal) => [nominal, false] as const),
-          ) as Record<FireworkNominal, boolean>;
+      const idsMap = Object.fromEntries(
+        Object.values(FireworkColor).flatMap((color) =>
+          Object.values(FireworkNominal).map((nominal) => [generateCardId([color, nominal]), false] as const),
+        ),
+      ) as Record<CardId, boolean>;
 
-          return [color, nominalMap] as const;
-        }),
-      ) as Record<FireworkColor, Record<FireworkNominal, boolean>>;
-
-      return [cardPosition, colorMap] as const;
+      return [cardPosition, idsMap] as const;
     }),
-  ) as Record<number, Record<FireworkColor, Record<FireworkNominal, boolean>>>;
+  ) as Record<number, Record<CardId, boolean>>;
 
   logs.forEach((logEntry) => {
     if (isType(logEntry, hint)) {
@@ -99,30 +87,42 @@ function calculateRemovedBasedOnHintsCards(logs: GameAction[]) {
 
       positions.forEach((position) => {
         if (isEnum(FireworkColor)(clue)) {
-          result[position] = mapValues(result[position], (nominalsMap, color) => {
-            if (color === clue) return nominalsMap;
+          result[position] = mapValues(result[position], (isAlreadyRemoved, cardId) => {
+            const [color] = parseCardId(cardId as CardId);
 
-            return mapValues(nominalsMap, () => true);
+            return color === clue ? isAlreadyRemoved : true;
           });
 
-          Object.keys(result).forEach((otherPosition) => {
-            if (positions.includes(Number(otherPosition))) return;
+          Object.keys(result).forEach((otherPositionString) => {
+            const otherPosition = Number(otherPositionString);
 
-            const otherPositionColorsMap = result[Number(otherPosition)]!;
+            if (positions.includes(otherPosition)) return;
 
-            otherPositionColorsMap[clue] = mapValues(otherPositionColorsMap[clue], () => true);
+            result[otherPosition] = mapValues(result[otherPosition], (isAlreadyRemoved, cardId) => {
+              const [color] = parseCardId(cardId as CardId);
+
+              return color === clue ? true : isAlreadyRemoved;
+            });
           });
         } else {
-          result[position] = mapValues(result[position], (nominalsMap) =>
-            mapValues(nominalsMap, (bool, nominal) => (nominal === clue ? bool : true)),
-          );
+          result[position] = mapValues(result[position], (isAlreadyRemoved, cardId) => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const [color, nominal] = parseCardId(cardId as CardId);
 
-          Object.keys(result).forEach((otherPosition) => {
-            if (positions.includes(Number(otherPosition))) return;
+            return nominal === clue ? isAlreadyRemoved : true;
+          });
 
-            result[Number(otherPosition)] = mapValues(result[Number(otherPosition)], (nominalMap) =>
-              mapValues(nominalMap, (bool, nominal) => (nominal === clue ? true : bool)),
-            );
+          Object.keys(result).forEach((otherPositionString) => {
+            const otherPosition = Number(otherPositionString);
+
+            if (positions.includes(otherPosition)) return;
+
+            result[otherPosition] = mapValues(result[otherPosition], (isAlreadyRemoved, cardId) => {
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const [color, nominal] = parseCardId(cardId as CardId);
+
+              return nominal === clue ? true : isAlreadyRemoved;
+            });
           });
         }
       });
@@ -132,7 +132,7 @@ function calculateRemovedBasedOnHintsCards(logs: GameAction[]) {
       const { position } = logEntry.payload;
 
       if (position !== undefined) {
-        result[position] = mapValues(result[position], (nominalsMap) => mapValues(nominalsMap, () => false));
+        result[position] = mapValues(result[position], () => false);
       }
     }
   });
@@ -144,50 +144,23 @@ const initalLogs: GameAction[] =
   import.meta.env.MODE !== 'development'
     ? []
     : [
-        discard({ cardId: 'YELLOW-3-1' }),
-        discard({ cardId: 'BLUE-2-1' }),
-        reset({ cardId: 'YELLOW-3-1' }),
-        play({ cardId: 'BLUE-1-1' }),
-        play({ cardId: 'YELLOW-1-0' }),
-        play({ cardId: 'YELLOW-2-0' }),
-        discard({ cardId: 'YELLOW-2-1' }),
-        play({ cardId: 'YELLOW-3-1' }),
-        discard({ cardId: 'BLUE-2-0' }),
-        play({ cardId: 'GREEN-1-2' }),
-        reset({ cardId: 'GREEN-1-2' }),
-        discard({ cardId: 'YELLOW-3-0' }),
-        discard({ cardId: 'RED-3-1' }),
-        discard({ cardId: 'RED-3-0' }),
-        discard({ cardId: 'WHITE-5-0' }),
-        play({ cardId: 'GREEN-1-2' }),
-        play({ cardId: 'GREEN-2-0' }),
+        discard({ cardId: 'YELLOW-3' }),
+        discard({ cardId: 'BLUE-2' }),
+        play({ cardId: 'BLUE-1' }),
+        play({ cardId: 'YELLOW-1' }),
+        play({ cardId: 'YELLOW-2' }),
+        discard({ cardId: 'YELLOW-2' }),
+        play({ cardId: 'YELLOW-3' }),
+        discard({ cardId: 'BLUE-2' }),
+        play({ cardId: 'GREEN-1' }),
+        discard({ cardId: 'YELLOW-3' }),
+        discard({ cardId: 'RED-3' }),
+        discard({ cardId: 'RED-3' }),
+        discard({ cardId: 'WHITE-5' }),
+        play({ cardId: 'GREEN-1' }),
+        play({ cardId: 'GREEN-2' }),
         hint({ positions: [1, 2], clue: FireworkColor.GREEN }),
       ];
-
-function calulateFirstAvailableIndex(logs: GameAction[], color: FireworkColor, nominal: FireworkNominal) {
-  const outOfGameIndexes = new Set<number>();
-
-  logs.forEach((logEntry) => {
-    if (!isType(logEntry, play, discard, reset)) return;
-
-    const [cardColor, cardNominal, cardIndex] = parseCardId(logEntry.payload.cardId);
-
-    if (cardColor !== color || cardNominal !== nominal) return;
-
-    if (isType(logEntry, reset)) {
-      outOfGameIndexes.delete(cardIndex);
-    } else {
-      outOfGameIndexes.add(cardIndex);
-    }
-  });
-
-  const inGameCardIndexes = difference(
-    Array.from({ length: numbersOfCards[nominal] }, (und, numIndex) => numIndex),
-    Array.from(outOfGameIndexes),
-  );
-
-  return inGameCardIndexes[0];
-}
 
 export function App() {
   const [logs, setLogs] = useState<GameAction[]>(initalLogs);
@@ -236,9 +209,6 @@ export function App() {
               onDiscard={(cardId) => {
                 dispatch(discard({ cardId }));
               }}
-              onReset={(cardId) => {
-                dispatch(reset({ cardId }));
-              }}
               onPlay={(cardId) => {
                 dispatch(play({ cardId }));
               }}
@@ -252,14 +222,12 @@ export function App() {
                 dispatch(hint({ positions, clue }));
               }}
               onDiscard={(position, color, nominal) => {
-                const cardIndex = calulateFirstAvailableIndex(logs, color, nominal);
-                const cardId = generateCardId([color, nominal, cardIndex as 0 | 1 | 2]);
+                const cardId = generateCardId([color, nominal]);
 
                 dispatch(discard({ cardId, position }));
               }}
               onPlay={(position, color, nominal) => {
-                const cardIndex = calulateFirstAvailableIndex(logs, color, nominal);
-                const cardId = generateCardId([color, nominal, cardIndex as 0 | 1 | 2]);
+                const cardId = generateCardId([color, nominal]);
 
                 dispatch(play({ cardId, position }));
               }}

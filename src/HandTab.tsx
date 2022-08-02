@@ -21,11 +21,11 @@ import { GiLightBulb } from 'react-icons/gi';
 
 import { PlayOrDiscardModal } from './PlayOrDiscardModal';
 import { fireworkColorToColorMap, fireworkColorToTextColorMap } from './constants';
-import { FireworkColor, FireworkNominal } from './types';
+import { CardId, FireworkColor, FireworkNominal, generateCardId } from './types';
 
 type HandTabProps = {
-  outOfGameCards: Record<FireworkColor, Record<FireworkNominal, boolean>>;
-  removedBasedOnHintsCards: Record<number, Record<FireworkColor, Record<FireworkNominal, boolean>>>;
+  outOfGameCards: Record<CardId, boolean>;
+  removedBasedOnHintsCards: Record<number, Record<CardId, boolean>>;
   onHint: (positions: number[], clue: FireworkColor | FireworkNominal) => void;
   onPlay: (position: number, color: FireworkColor, nominal: FireworkNominal) => void;
   onDiscard: (position: number, color: FireworkColor, nominal: FireworkNominal) => void;
@@ -67,8 +67,8 @@ export function HandTab({ removedBasedOnHintsCards, outOfGameCards, onHint, onPl
                 {Object.values(FireworkColor).map((color) => (
                   <HStack key={color}>
                     {Object.values(FireworkNominal).map((nominal) => {
-                      const isInverted =
-                        outOfGameCards[color][nominal] || removedBasedOnHintsCards[cardPosition]![color][nominal];
+                      const cardId = generateCardId([color, nominal]);
+                      const isInverted = outOfGameCards[cardId] || removedBasedOnHintsCards[cardPosition]![cardId];
 
                       return (
                         <Center

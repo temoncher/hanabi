@@ -1,4 +1,12 @@
-import { FireworkColor } from './types';
+import { FireworkColor, FireworkNominal } from './types';
+
+export const numbersOfCards = {
+  [FireworkNominal.ONE]: 3,
+  [FireworkNominal.TWO]: 2,
+  [FireworkNominal.THREE]: 2,
+  [FireworkNominal.FOUR]: 2,
+  [FireworkNominal.FIVE]: 1,
+} as const;
 
 export const fireworkColorToColorMap = {
   [FireworkColor.RED]: 'red.300',
