@@ -1,5 +1,5 @@
 # Hanabi
-
+This project was created to help people play the Hanabi board game. This [web-implementation](https://hanabi-omega.vercel.app/) completely eliminates the need to use paper and pen during the game.
 
 
 ## Getting started
